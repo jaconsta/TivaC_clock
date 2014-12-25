@@ -3,6 +3,7 @@
  * 
  * Base logic to run the clock in seconds, minutes and hours
  * 
+ *
  * Minutes run in 60 minutes binary format.
  * Hours run in 12 hour decade mode.
  * 
@@ -21,10 +22,16 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "driverlib/pin_map.h"
+#include "inc/hw_memmap.h"
+#include "inc/hw_types.h"
 #include "inc/tm4c123gh6pm.h"
-//#include "inc/hw_memmap.h"
+#include "driverlib/pin_map.h"
+#include "driverlib/rom.h"
+#include "driverlib/sysctl.h"
+#include "driverlib/interrupt.h"
+#include "driverlib/timer.h"
 //#include "inc/hw_types.h"
+#include "driverlib/gpio.h"
 
 // Prototype function
 void portA_init(void);
@@ -40,22 +47,52 @@ void enable_interrupts(void);
 unsigned int portA_advance = 0x04;
 unsigned int portE_advance = 0x01;
 
+//*****************************************************************************
+//
+// Flags that contain the current value of the interrupt indicator as displayed
+// on the UART.
+//
+//*****************************************************************************
+uint32_t g_ui32Flags;
+
 int main(void){
+	//
+	// Enable lazy stacking for interrupt handlers.  This allows floating-point
+	// instructions to be used within interrupt handlers, but at the expense of
+	// extra stack usage.
+	//
+	ROM_FPULazyStackingEnable();
+
+	//
+	// Set the clocking to run directly from the crystal.
+	ROM_SysCtlClockSet(SYSCTL_SYSDIV_1 | SYSCTL_USE_OSC | SYSCTL_OSC_MAIN |
+										 SYSCTL_XTAL_16MHZ);
+	
+	// Enable the peripherals used by this example.
+  ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+
+	// Enable processor interrupts.
+	ROM_IntMasterEnable();
+
+	// Configure the two 32-bit periodic timers.
+	ROM_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+	ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, ROM_SysCtlClockGet());
+
+	// Setup the interrupts for the timer timeouts.
+	ROM_IntEnable(INT_TIMER0A);
+	ROM_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+
+	// Enable the timers.
+	ROM_TimerEnable(TIMER0_BASE, TIMER_A);
+
 	portA_init();
 	portE_init();
 	portF_init();
 	GPIO_PORTA_DATA_R |= portA_advance;
-	delay(1);
+	//delay(1);
 	GPIO_PORTE_DATA_R |= portE_advance;
 	while (1){
-		delay(1);
-
-		shiftMinutes();
-		GPIO_PORTF_DATA_R |= 0x08;
-		delay(1);
-
-		GPIO_PORTF_DATA_R &= ~0x08;
-	}
+ 	}
 
 }
 
@@ -116,6 +153,28 @@ void delay(unsigned long time){
 
 	}
 	return;
+}
+
+/** Use timmer 0 to control the clock shift*/
+/** TODO: Adjust the delay to last one exact second. */
+void Timer0IntHandler(void) {
+    //
+    // Clear the timer interrupt.
+    ROM_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+
+    //
+    // Toggle the flag for the first timer.
+    HWREGBITW(&g_ui32Flags, 0) ^= 1;
+
+    //
+    // Update the interrupt status on the display.
+    ROM_IntMasterDisable();
+
+    // Shift clock time
+		shiftMinutes();
+		GPIO_PORTF_DATA_R ^= 0x08;
+    ROM_IntMasterEnable();
+		return;
 }
 
 /** Controls the minutes advance. */

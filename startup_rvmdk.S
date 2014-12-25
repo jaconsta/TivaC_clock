@@ -75,6 +75,13 @@ __heap_limit
 
 ;******************************************************************************
 ;
+; External declarations for the interrupt handlers used by the application.
+;
+;******************************************************************************
+        EXTERN  Timer0IntHandler
+
+;******************************************************************************
+;
 ; The vector table.
 ;
 ;******************************************************************************
@@ -115,6 +122,7 @@ __Vectors
         DCD     IntDefaultHandler           ; ADC Sequence 2
         DCD     IntDefaultHandler           ; ADC Sequence 3
         DCD     IntDefaultHandler           ; Watchdog timer
+        DCD     Timer0IntHandler            ; Timer 0 subtimer A
         DCD     IntDefaultHandler           ; Timer 0 subtimer A
         DCD     IntDefaultHandler           ; Timer 0 subtimer B
         DCD     IntDefaultHandler           ; Timer 1 subtimer A

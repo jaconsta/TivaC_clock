@@ -88,9 +88,9 @@ int main(void){
 	portA_init();
 	portE_init();
 	portF_init();
-	GPIO_PORTA_DATA_R |= portA_advance;
+	//GPIO_PORTA_DATA_R |= portA_advance;
 	//delay(1);
-	GPIO_PORTE_DATA_R |= portE_advance;
+	//GPIO_PORTE_DATA_R |= portE_advance;
 	while (1){
  	}
 
@@ -180,7 +180,7 @@ void Timer0IntHandler(void) {
 /** Controls the minutes advance. */
 void shiftMinutes(){
   if((GPIO_PORTA_DATA_R & 0xF0) == 0xF0){
-		GPIO_PORTA_DATA_R &= ~0xFC;
+		GPIO_PORTA_DATA_R &= ~0xFF;
 		shiftHours();
 		GPIO_PORTA_DATA_R |= portA_advance;
 	} else {
@@ -192,12 +192,12 @@ void shiftMinutes(){
 void shiftHours(){
 	if(((GPIO_PORTE_DATA_R & 0x0F) == 0x02) && ((GPIO_PORTF_DATA_R & 0x04) == 0x04)){
 		GPIO_PORTE_DATA_R &= ~0x0F;
-		GPIO_PORTE_DATA_R |= portE_advance;
+		//GPIO_PORTE_DATA_R |= portE_advance;
 		GPIO_PORTF_DATA_R &= ~0x04;
 	}
 	if((GPIO_PORTE_DATA_R & 0x0F) == 0x09){
 		GPIO_PORTE_DATA_R &= ~0x0F;
-		GPIO_PORTE_DATA_R |= portE_advance;
+		//GPIO_PORTE_DATA_R |= portE_advance;
 		GPIO_PORTF_DATA_R |= 0x04; 
 	} else {
 		GPIO_PORTE_DATA_R += portE_advance; 
